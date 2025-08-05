@@ -1,67 +1,64 @@
+from google import generativeai as genai
+import speech_recognition as sr
+import pyttsx3
+import webbrowser
+from apikey import api_data
 
-from openai import OpenAI
-from apikey import api_data 
-import os
-import speech_recognition as sr # Converts my voice commands to text 
-import pyttsx3 # Read out text output to voice. 
-import webbrowser 
-
-Model = "gpt-4o"
-client = OpenAI(api_key=api_data)
+genai.configure(api_key=api_data)
+model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 
 def Reply(question):
-    completion = client.chat.completions.create(
-        model=Model,
-        messages=[
-            {'role':"system","content":"You are a helful assistant"},
-            {'role':'user','content':question}
-        ],
-        max_tokens=200
-    )
-    answer = completion.choices[0].message.content
-    return answer 
+    try:
+        response = model.generate_content(question)
+        return response.text.strip()
+    except Exception:
+        return "Sorry, I couldn't generate a response."
 
-# Text to speech 
 engine = pyttsx3.init('sapi5')
 voices = engine.getProperty('voices')
 engine.setProperty('voice', voices[0].id)
 
 def speak(text):
+    print(f"Speaking: {text}")
     engine.say(text)
     engine.runAndWait()
-    
-speak("Hello How are you?")
 
 def takeCommand():
-    
     r = sr.Recognizer()
-    with sr.Microphone() as source: 
-        print('Listening .......')
-        r.pause_threshold = 1 # Wait for 1 sec before considering the end of a phrase
+    with sr.Microphone() as source:
+        print("Listening...")
+        r.pause_threshold = 1
         audio = r.listen(source)
-    try: 
-        print('Recogninzing ....')
-        query = r.recognize_google(audio, language = 'en-in')
-        print("User Said: {} \n".format(query))
-    except Exception as e:
-        print("Say that again .....")
-        return "None"
+    try:
+        print("Recognizing...")
+        query = r.recognize_google(audio, language='en-in')
+        print(f"User said: {query}")
+    except Exception:
+        print("Could not understand. Try again.")
+        return "none"
     return query
 
-if __name__ == '__main__':
-    while True: 
+if __name__ == "__main__":
+    speak("Hello, how can I help you?")
+    while True:
         query = takeCommand().lower()
-        if query == 'none':
+        if query == "none":
             continue
-        
-        ans = Reply(query)
-        print(ans)
-        speak(ans)
-        
-        # Specific Browser Related Tasks 
-        if "Open youtube" in query: 
-            webbrowser.open('www.youtube.com')
-        if "Open Google" in query: 
-            webbrowser.open('www.google.com')
-        if "bye" in query:
-            break 
+
+        if "open youtube" in query:
+            webbrowser.open("https://www.youtube.com")
+            speak("Opening YouTube")
+            continue
+
+        if "open google" in query:
+            webbrowser.open("https://www.google.com")
+            speak("Opening Google")
+            continue
+
+        if "bye" in query or "exit" in query:
+            speak("Goodbye!")
+            break
+
+        answer = Reply(query)
+        print(f"AI: {answer}")
+        speak(answer)
